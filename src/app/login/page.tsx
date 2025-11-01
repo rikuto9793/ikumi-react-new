@@ -8,6 +8,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, Lock, Eye, EyeOff, Baby, Heart, Users, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/user/Pageheader'; //自作コンポ
+import { useRouter } from 'next/navigation';
+
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -15,15 +17,16 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleLogin = async () => {
     setIsLoading(true);
     setError('');
-    
+
     try {
       // ここにSupabase認証の実装
       console.log('ログイン:', { email, password });
-      
+
       // 実際の実装では、成功後にダッシュボードへリダイレクト
       setTimeout(() => {
         setIsLoading(false);
@@ -39,8 +42,8 @@ const LoginPage = () => {
       <div className="max-w-md w-full space-y-6">
         {/* ヘッダー */}
         <PageHeader
-        text1='おかえりなさい'
-        text2='ikumi-へログイン'/>
+          text1='おかえりなさい'
+          text2='ikumi-へログイン' />
 
         {/* メインカード */}
         <Card className="border-0 shadow-xl">
@@ -50,7 +53,7 @@ const LoginPage = () => {
               アカウントにアクセスしてコミュニティに参加しましょう
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="space-y-4">
             {error && (
               <Alert className="border-red-200 bg-red-50">
@@ -131,7 +134,11 @@ const LoginPage = () => {
             <div className="text-sm text-gray-600">
               アカウントをお持ちでない場合
             </div>
-            <Button variant="outline" className="w-full border-purple-200 text-purple-600 hover:bg-purple-50">
+            <Button
+              variant="outline"
+              className="w-full border-purple-200 text-purple-600 hover:bg-purple-50"
+              onClick={() => router.push('/signup')}
+            >
               新規登録はこちら
             </Button>
           </CardFooter>
