@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -21,11 +22,13 @@ import {
 const ExperienceLevelPage = () => {
   const [selectedLevel, setSelectedLevel] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleNext = async () => {
     if (!selectedLevel) return;
     
     setIsLoading(true);
+    router.push("/profile/2");
     
     try {
       // ここでSupabaseにexperience_levelを保存

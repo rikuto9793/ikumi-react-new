@@ -1,16 +1,19 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation'; // ✅ 追加
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Mail, Lock, Eye, EyeOff, Baby, Heart, Users, Loader2, CheckCircle } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Baby, Loader2, CheckCircle } from 'lucide-react';
 import PageHeader from '@/components/user/Pageheader'; //自作コンポ
 
 const SignupPage = () => {
+  const router = useRouter(); // ✅ 追加
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,8 +23,7 @@ const SignupPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-
-  //パスワードの一致確認.
+  //パスワードの一致確認
   const validatePassword = () => {
     if (password !== confirmPassword) {
       return 'パスワードが一致しません';
@@ -32,47 +34,35 @@ const SignupPage = () => {
     return null;
   };
 
-
   const handleSignup = async () => {
     setError('');
 
     const passwordError = validatePassword();
-    if (passwordError) { //パスワードエラー発生時はここで処理落ち.
+    if (passwordError) {
       setError(passwordError);
       return;
     }
 
-    if (!acceptTerms) { //利用規約に同意したかの確認.
+    if (!acceptTerms) {
       setError('利用規約に同意してください');
       return;
     }
 
     setIsLoading(true);
 
-    try {
-      // ここにSupabase認証の実装.あとでかく.
-      console.log('新規登録:', { email, password });
-
-      // 実際の実装では、成功後にプロフィール設定ページへリダイレクト
-      setTimeout(() => {
-        setIsLoading(false);
-        // プロフィール設定ページへの遷移処理
-      }, 2000);
-    } catch (err) {
-      setError('アカウントの作成に失敗しました。もう一度お試しください。');
+    // ✅ 保存機能なしでそのまま遷移
+    setTimeout(() => {
       setIsLoading(false);
-    }
+      router.push("/profile/1"); // ✅ 新規登録後にプロフィール設定ページへ
+    }, 1000);
   };
 
-  // パスワードの強さ確認.
+  // パスワード強度判定
   const passwordStrength = () => {
-
-    // ifのネストで分岐増やしまくるの回避で、1段1段で処理して、一段でエラー生まれたらそれを返して終了させてる.
     if (!password) return null;
-    if (password.length < 6) return { level: 'weak', text: '弱い', color: 'text-red-500' };
-    if (password.length < 8) return { level: 'medium', text: '普通', color: 'text-yellow-500' };
-    // 最後まで進めるとok
-    return { level: 'strong', text: '強い', color: 'text-green-500' };
+    if (password.length < 6) return { text: '弱い', color: 'text-red-500' };
+    if (password.length < 8) return { text: '普通', color: 'text-yellow-500' };
+    return { text: '強い', color: 'text-green-500' };
   };
 
   const strength = passwordStrength();
@@ -81,9 +71,7 @@ const SignupPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-6">
         {/* ヘッダー */}
-        <PageHeader
-          text1='はじめまして！'
-          text2='ikumi-に参加' />
+        <PageHeader text1="はじめまして！" text2="ikumi-に参加" />
 
         {/* メインカード */}
         <Card className="border-0 shadow-xl">
@@ -97,12 +85,11 @@ const SignupPage = () => {
           <CardContent className="space-y-4">
             {error && (
               <Alert className="border-red-200 bg-red-50">
-                <AlertDescription className="text-red-700">
-                  {error}
-                </AlertDescription>
+                <AlertDescription className="text-red-700">{error}</AlertDescription>
               </Alert>
             )}
 
+            {/* メールアドレス */}
             <div className="space-y-2">
               <Label htmlFor="email">メールアドレス</Label>
               <div className="relative">
@@ -119,6 +106,7 @@ const SignupPage = () => {
               </div>
             </div>
 
+            {/* パスワード */}
             <div className="space-y-2">
               <Label htmlFor="password">パスワード</Label>
               <div className="relative">
@@ -139,11 +127,7 @@ const SignupPage = () => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4 text-gray-400" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-400" />
-                  )}
+                  {showPassword ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
                 </Button>
               </div>
               {strength && (
@@ -154,6 +138,7 @@ const SignupPage = () => {
               )}
             </div>
 
+            {/* パスワード確認 */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">パスワード（確認）</Label>
               <div className="relative">
@@ -174,11 +159,7 @@ const SignupPage = () => {
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4 text-gray-400" />
-                  ) : (
-                    <Eye className="w-4 h-4 text-gray-400" />
-                  )}
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
                 </Button>
               </div>
               {confirmPassword && password === confirmPassword && (
@@ -189,34 +170,23 @@ const SignupPage = () => {
               )}
             </div>
 
+            {/* 同意チェック */}
             <div className="flex flex-col items-start space-y-3">
-              {/* 利用規約 */}
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id='terms'
-                  checked={acceptTerms} />
-                <Label
-                  htmlFor='terms'
-                  className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'>
-                  <span className="text-purple-600 hover:underline ">利用規約</span>
-                  に同意します
+                <Checkbox id="terms" checked={acceptTerms} onCheckedChange={() => setAcceptTerms(!acceptTerms)} />
+                <Label htmlFor="terms" className="text-sm font-medium leading-none">
+                  <span className="text-purple-600 hover:underline">利用規約</span> に同意します
                 </Label>
               </div>
-
-              {/* プライバシーポリシー同意 */}
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id='terms'
-                  checked={acceptTerms} />
-                <Label
-                  htmlFor='terms'
-                  className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'>
-                  <span className="text-purple-600 hover:underline ">プライバシーポリシー</span>
-                  に同意します
+                <Checkbox id="privacy" checked={acceptTerms} onCheckedChange={() => setAcceptTerms(!acceptTerms)} />
+                <Label htmlFor="privacy" className="text-sm font-medium leading-none">
+                  <span className="text-purple-600 hover:underline">プライバシーポリシー</span> に同意します
                 </Label>
               </div>
             </div>
 
+            {/* 登録ボタン */}
             <Button
               onClick={handleSignup}
               disabled={isLoading || !email || !password || !confirmPassword || !acceptTerms}
@@ -234,7 +204,6 @@ const SignupPage = () => {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            {/* 新規登録の特典説明 */}
             <Alert className="border-purple-200 bg-purple-50">
               <Baby className="w-4 h-4 text-purple-600" />
               <AlertDescription className="text-purple-700">
@@ -245,9 +214,7 @@ const SignupPage = () => {
             </Alert>
 
             <div className="w-full text-center space-y-2">
-              <div className="text-sm text-gray-600">
-                すでにアカウントをお持ちの場合
-              </div>
+              <div className="text-sm text-gray-600">すでにアカウントをお持ちの場合</div>
               <Button variant="outline" className="w-full border-purple-200 text-purple-600 hover:bg-purple-50">
                 ログインはこちら
               </Button>
@@ -255,7 +222,6 @@ const SignupPage = () => {
           </CardFooter>
         </Card>
 
-        {/* フッター */}
         <div className="text-center text-sm text-gray-500">
           <p>© 2025 ママコミュニティ. All rights reserved.</p>
         </div>

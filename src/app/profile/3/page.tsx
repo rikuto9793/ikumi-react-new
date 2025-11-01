@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from "next/navigation";
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 
 const ChallengesSelectionPage = () => {
+  const router = useRouter();
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -122,6 +124,7 @@ const ChallengesSelectionPage = () => {
       // 実際の実装では、次のページ（コミュニティ目的選択）へ遷移
       setTimeout(() => {
         setIsLoading(false);
+        router.push("/profile/4"); // ✅ 次のページへ遷移
         // 次のページへのナビゲーション
       }, 1000);
     } catch (error) {
@@ -132,6 +135,7 @@ const ChallengesSelectionPage = () => {
 
   const handleBack = () => {
     // 前のページ（ユーザー名設定）に戻る
+    router.push("/profile/2");
     console.log('前のページに戻る');
   };
 

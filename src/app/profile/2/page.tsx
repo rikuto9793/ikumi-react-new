@@ -18,20 +18,22 @@ import {
   Sparkles,
   Copy
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const UsernameSetupPage = () => {
+  const router = useRouter();
+
   const [userIdentifier, setUserIdentifier] = useState<string>("");
   const [username, setUsername] = useState<string>("");
   const [isCheckingIdentifier, setIsCheckingIdentifier] = useState<boolean>(false);
   const [isCheckingUsername, setIsCheckingUsername] = useState<boolean>(false);
-  const [identifierAvailable, setIdentifierAvailable] = useState<boolean | null>(null);// <boolean | null>これで型指定。で、| = 「または」（ユニオン型）を使ってるので、booleanまたはnull型がくるよーてしてる.
+  const [identifierAvailable, setIdentifierAvailable] = useState<boolean | null>(null);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [errors, setErrors] = useState<{[key: string] : string}>({}); // errorsはオブジェクトリテラルなので初期値として{}が必要.そして型指定では、キーが文字列で値も文字列なのでRecord<string: string>を使うか、<[key: string]: string>が必要。[]を使うのは、<>の代わり、、、
-  
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // 自動生成のuser_identifier
-  const generateUserIdentifier = () => {
+  const generateUserIdentifier = (): string => {
     const randomNum = Math.floor(Math.random() * 9999) + 1;
     const paddedNum = randomNum.toString().padStart(4, '0');
     return `mama${paddedNum}`;
@@ -88,16 +90,9 @@ const UsernameSetupPage = () => {
     return () => clearTimeout(timeoutId);
   }, [username]);
 
-  const temp_data = {
-    userIdentifier: "mao"
-    
-  };
-
-  const validateForm = () => {
-
-
-
-    const newErrors: Record<string, string> = {}; //{}ってオブジェクトリテラルに対して、キーと値が入る（キーと値の代わりにオブジェクトリテラルでもok）時にキーと値についての型の定義をしておかないと使えない.
+  // バリデーション関数（boolean を返すように明示）
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
 
     if (!userIdentifier) {
       newErrors.userIdentifier = 'ユーザーIDは必須です';
@@ -130,10 +125,10 @@ const UsernameSetupPage = () => {
       // ここでSupabaseにuser_identifierとusernameを保存
       console.log('保存データ:', { userIdentifier, username });
 
-      // 実際の実装では、次のページ（悩み選択）へ遷移
+      // 実際の実装では次のページへ遷移
       setTimeout(() => {
         setIsLoading(false);
-        // 次のページへのナビゲーション
+        router.push("/profile/3"); // ✅ 次のページへ
       }, 1000);
     } catch (error) {
       console.error('保存エラー:', error);
@@ -142,13 +137,11 @@ const UsernameSetupPage = () => {
   };
 
   const handleBack = () => {
-    // 前のページ（経験レベル選択）に戻る
     console.log('前のページに戻る');
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // 実際の実装ではトーストなどで通知
     console.log('コピーしました:', text);
   };
 
@@ -318,7 +311,13 @@ const UsernameSetupPage = () => {
 
           <Button
             onClick={handleNext}
-            disabled={!userIdentifier || !username || identifierAvailable !== true || usernameAvailable !== true || isLoading}
+            disabled={
+              !userIdentifier ||
+              !username ||
+              identifierAvailable !== true ||
+              usernameAvailable !== true ||
+              isLoading
+            }
             size="lg"
             className="px-8 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
           >

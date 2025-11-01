@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from "next/navigation"; // ✅ 追加
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -9,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Users,
-  ArrowRight,
   ArrowLeft,
   MessageCircle,
   Search,
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 const CommunityGoalsSelection = () => {
+  const router = useRouter(); // ✅
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -105,31 +106,26 @@ const CommunityGoalsSelection = () => {
   ];
 
   const handleGoalToggle = (goalCode: string) => {
-    setSelectedGoals(prev => {
-      if (prev.includes(goalCode)) {
-        return prev.filter(code => code !== goalCode);
-      } else {
-        return [...prev, goalCode];
-      }
-    });
+    setSelectedGoals(prev =>
+      prev.includes(goalCode)
+        ? prev.filter(code => code !== goalCode)
+        : [...prev, goalCode]
+    );
   };
 
   const handleComplete = async () => {
     setIsLoading(true);
-    
     try {
-      // ここでSupabaseにcommunity_goalsを保存し、profile_setup_completedをtrueに更新
       console.log('選択されたコミュニティ目的:', selectedGoals);
       console.log('プロフィール設定完了!');
-      
-      // 完了処理
+
       setTimeout(() => {
         setIsLoading(false);
         setIsCompleted(true);
-        
-        // 実際の実装では、ダッシュボードへリダイレクト
+
+        // ✅ 完了後に /profile/5 へ遷移
         setTimeout(() => {
-          console.log('ダッシュボードへ遷移');
+          router.push("/profile/5");
         }, 2000);
       }, 1000);
     } catch (error) {
@@ -139,8 +135,7 @@ const CommunityGoalsSelection = () => {
   };
 
   const handleBack = () => {
-    // 前のページ（悩み選択）に戻る
-    console.log('前のページに戻る');
+    router.push("/profile/3"); // ✅ 前に戻る
   };
 
   const categories = {
@@ -166,6 +161,7 @@ const CommunityGoalsSelection = () => {
             </p>
             <Button
               size="lg"
+              onClick={() => router.push("/profile/5")} // ✅ 追加
               className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
             >
               <Sparkles className="w-4 h-4 mr-2" />
