@@ -11,6 +11,18 @@ const AppHomeScreen: React.FC = () => {
     router.push("/profile/6");
   };
 
+  const goToLives = () => {
+    router.push("/live");
+  }
+
+  const goToSearch = () => {
+    router.push("/search");
+  }
+
+  const goToChat = () => {
+    router.push("/chatmama");
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
       {/* ヘッダー */}
@@ -136,13 +148,17 @@ const AppHomeScreen: React.FC = () => {
       <nav className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-sm border-t border-gray-200">
         <div className="flex items-center justify-around py-2">
           {/* ライブ配信を探す */}
-          <button className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
+          <button 
+          onClick={goToLives}
+          className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <Monitor className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">配信</span>
           </button>
 
           {/* 検索 */}
-          <button className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
+          <button 
+          onClick={goToSearch}
+          className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <Search className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">検索</span>
           </button>
@@ -156,7 +172,9 @@ const AppHomeScreen: React.FC = () => {
           </button>
 
           {/* チャット */}
-          <button className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
+          <button
+          onClick={goToChat}
+          className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <MessageCircle className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">チャット</span>
           </button>
