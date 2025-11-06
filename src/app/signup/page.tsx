@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Mail, Lock, Eye, EyeOff, Baby, Loader2, CheckCircle } from 'lucide-react';
 import PageHeader from '@/components/user/Pageheader'; //自作コンポ
+import { createClient } from "@/utils/supabase/client";
+
 
 const SignupPage = () => {
   const router = useRouter(); // ✅ 追加
@@ -34,28 +36,70 @@ const SignupPage = () => {
     return null;
   };
 
-  const handleSignup = async () => {
-    setError('');
+ const handleSignup = async () => {
+  setError("");
 
-    const passwordError = validatePassword();
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
+  const passwordError = validatePassword();
+  if (passwordError) {
+    setError(passwordError);
+    return;
+  }
+  if (!acceptTerms) {
+    setError("利用規約に同意してください");
+    return;
+  }
 
-    if (!acceptTerms) {
-      setError('利用規約に同意してください');
-      return;
-    }
+  setIsLoading(true);
 
-    setIsLoading(true);
+  const supabase = createClient();
 
-    // ✅ 保存機能なしでそのまま遷移
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push("/profile/1"); // ✅ 新規登録後にプロフィール設定ページへ
-    }, 1000);
-  };
+  // ✅ メール認証フローでも動くように redirect を指定
+  const { data, error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`, // 例: /auth/callback でセッション完成
+    },
+  });
+
+  if (signUpError) {
+    setIsLoading(false);
+    setError(signUpError.message);
+    return;
+  }
+
+  const { user, session } = data;
+
+  // ✅ ここが重要：
+  // メール認証が有効なプロジェクトでは "session は null" なので、
+  // その場で profiles に INSERT しようとすると RLS で落ちる。
+  // → いったん「確認メール送信しました」画面へ遷移して終了。
+  if (!session || !user) {
+    setIsLoading(false);
+    // 任意: 確認メール案内ページへ
+    router.push(`/signup/check-email?email=${encodeURIComponent(email)}`);
+    return;
+  }
+
+  // ✅ ここに来るのは "セッションが既にある"（= 開発でメール確認オフなど）
+  // RLS: insert は (auth.uid() = id) で通ることが前提
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .insert({ id: user.id, username: null })
+    .single();
+
+  if (profileError) {
+    setIsLoading(false);
+    setError(`プロフィール作成に失敗しました: ${profileError.message}`);
+    return;
+  }
+
+  setIsLoading(false);
+  router.push(`/profile/create`);
+};
+
+
+
 
   // パスワード強度判定
   const passwordStrength = () => {
@@ -66,6 +110,10 @@ const SignupPage = () => {
   };
 
   const strength = passwordStrength();
+
+  const handleLogin = () => {
+    router.push("/login");
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 flex items-center justify-center p-4">
@@ -215,7 +263,9 @@ const SignupPage = () => {
 
             <div className="w-full text-center space-y-2">
               <div className="text-sm text-gray-600">すでにアカウントをお持ちの場合</div>
-              <Button variant="outline" className="w-full border-purple-200 text-purple-600 hover:bg-purple-50">
+              <Button
+              onClick={handleLogin}
+              variant="outline" className="w-full border-purple-200 text-purple-600 hover:bg-purple-50">
                 ログインはこちら
               </Button>
             </div>

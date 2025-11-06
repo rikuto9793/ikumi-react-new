@@ -1,34 +1,34 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+  // ❗レスポンスは一度だけ作る（再生成しない）
+  const response = NextResponse.next({
+    request: { headers: request.headers },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
+        // 必須: 3メソッド (get / set / remove)
+        get(name: string) {
+          return request.cookies.get(name)?.value;
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+        set(name: string, value: string, options?: Parameters<typeof response.cookies.set>[2]) {
+          // ✅ response 側にだけ書く
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options?: Parameters<typeof response.cookies.set>[2]) {
+          response.cookies.set({ name, value: "", ...options });
         },
       },
     }
-  )
+  );
 
-  // refreshing the auth token
-  await supabase.auth.getUser()
+  // Cookie同期のために session 取得（getUserでもOK）
+  await supabase.auth.getSession();
 
-  return supabaseResponse
+  return response;
 }

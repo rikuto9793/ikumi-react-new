@@ -125,7 +125,7 @@ const CommunityGoalsSelection = () => {
 
         // ✅ 完了後に /profile/5 へ遷移
         setTimeout(() => {
-          router.push("/profile/5");
+          router.push("/home");
         }, 2000);
       }, 1000);
     } catch (error) {
@@ -135,7 +135,7 @@ const CommunityGoalsSelection = () => {
   };
 
   const handleBack = () => {
-    router.push("/profile/3"); // ✅ 前に戻る
+    router.push("/onboarding/2"); // ✅ 前に戻る
   };
 
   const categories = {
@@ -161,7 +161,7 @@ const CommunityGoalsSelection = () => {
             </p>
             <Button
               size="lg"
-              onClick={() => router.push("/profile/5")} // ✅ 追加
+              onClick={() => router.push("/home")} // ✅ 追加
               className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
             >
               <Sparkles className="w-4 h-4 mr-2" />
