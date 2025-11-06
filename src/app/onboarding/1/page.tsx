@@ -18,7 +18,7 @@ const ExperienceLevelPage = () => {
   const handleNext = async () => {
     if (!selectedLevel) return;
     setIsLoading(true);
-    router.push("/profile/2");
+    router.push("/onboarding/2");
     try {
       console.log("選択された経験レベル:", selectedLevel);
       setTimeout(() => setIsLoading(false), 1000);
@@ -27,6 +27,11 @@ const ExperienceLevelPage = () => {
       setIsLoading(false);
     }
   };
+
+  React.useEffect(() => {
+  router.prefetch("/onboarding/2");
+}, [router]);
+
 
   const experienceOptions = [
     {

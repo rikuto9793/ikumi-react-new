@@ -53,7 +53,7 @@ const ChallengesSelectionPage = () => {
       console.log('選択された悩み:', selectedChallenges);
       setTimeout(() => {
         setIsLoading(false);
-        router.push('/profile/4');
+        router.push('/onboarding/3');
       }, 1000);
     } catch (error) {
       console.error('保存エラー:', error);
@@ -62,7 +62,7 @@ const ChallengesSelectionPage = () => {
   };
 
   const handleBack = () => {
-    router.push('/profile/2');
+    router.push('/onboarding/1');
   };
 
   return (

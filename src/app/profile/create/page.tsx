@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,70 +19,117 @@ import {
   RefreshCw,
   AlertCircle,
   Sparkles,
-  Copy
+  Copy,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 const UsernameSetupPage = () => {
   const router = useRouter();
+  const supabase = createClient();
 
   const [userIdentifier, setUserIdentifier] = useState<string>("");
   const [username, setUsername] = useState<string>("");
+
   const [isCheckingIdentifier, setIsCheckingIdentifier] = useState<boolean>(false);
   const [isCheckingUsername, setIsCheckingUsername] = useState<boolean>(false);
   const [identifierAvailable, setIdentifierAvailable] = useState<boolean | null>(null);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // 画像アップロード用
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState<boolean>(false);
+
+  // ① ログインしていなければ /login へ
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) router.replace("/login");
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ② デフォルトIDを生成（mama0001〜mama9999）
   const generateUserIdentifier = (): string => {
     const randomNum = Math.floor(Math.random() * 9999) + 1;
     const paddedNum = randomNum.toString().padStart(4, "0");
     return `mama${paddedNum}`;
   };
-
   useEffect(() => {
     setUserIdentifier(generateUserIdentifier());
   }, []);
 
-  useEffect(() => {
-    if (!userIdentifier || userIdentifier.length < 5) {
+  
+  // ③ ユーザーID(public_id) 重複チェック（DB問い合わせ）
+useEffect(() => {
+  if (!userIdentifier || userIdentifier.length < 5) {
+    setIdentifierAvailable(null);
+    return;
+  }
+  const t = setTimeout(async () => {
+    setIsCheckingIdentifier(true);
+    try {
+      const { count, error, status } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true }) // ← rowsは返さず件数だけ
+        .eq("public_id", userIdentifier);
+
+      // 406はHEAD要求の仕様由来なので異常扱いしない
+      if (error && status !== 406) {
+        console.error("ID重複チェックエラー:", (error as any)?.message ?? error);
+        setIdentifierAvailable(null);
+      } else {
+        setIdentifierAvailable((count ?? 0) === 0);
+      }
+    } catch (e: any) {
+      console.error("ID重複チェック例外:", e?.message ?? e);
       setIdentifierAvailable(null);
-      return;
+    } finally {
+      setIsCheckingIdentifier(false);
     }
-    const timeoutId = setTimeout(async () => {
-      setIsCheckingIdentifier(true);
-      try {
-        const isAvailable = !["mama1234", "mama5678"].includes(userIdentifier);
-        setIdentifierAvailable(isAvailable);
-      } catch (error) {
-        console.error("ID重複チェックエラー:", error);
-      } finally {
-        setIsCheckingIdentifier(false);
-      }
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  }, [userIdentifier]);
+  }, 400);
+  return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [userIdentifier]);
 
-  useEffect(() => {
-    if (!username || username.length < 2) {
+
+  // ④ ユーザー名(username) 重複チェック（大文字小文字無視の完全一致）
+useEffect(() => {
+  if (!username || username.length < 2) {
+    setUsernameAvailable(null);
+    return;
+  }
+  const t = setTimeout(async () => {
+    setIsCheckingUsername(true);
+    try {
+      const { count, error, status } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .ilike("username", username); // ワイルドカードなし=大小無視の完全一致
+
+      if (error && status !== 406) {
+        console.error("ユーザー名重複チェックエラー:", (error as any)?.message ?? error);
+        setUsernameAvailable(null);
+      } else {
+        setUsernameAvailable((count ?? 0) === 0);
+      }
+    } catch (e: any) {
+      console.error("ユーザー名重複チェック例外:", e?.message ?? e);
       setUsernameAvailable(null);
-      return;
+    } finally {
+      setIsCheckingUsername(false);
     }
-    const timeoutId = setTimeout(async () => {
-      setIsCheckingUsername(true);
-      try {
-        const isAvailable = !["テストママ", "サンプルユーザー"].includes(username);
-        setUsernameAvailable(isAvailable);
-      } catch (error) {
-        console.error("ユーザー名重複チェックエラー:", error);
-      } finally {
-        setIsCheckingUsername(false);
-      }
-    }, 500);
-    return () => clearTimeout(timeoutId);
-  }, [username]);
+  }, 400);
+  return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [username]);
 
+
+  // 入力バリデーション
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!userIdentifier) {
@@ -102,29 +152,113 @@ const UsernameSetupPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = async () => {
-    if (!validateForm()) return;
-    setIsLoading(true);
-    try {
-      console.log("保存データ:", { userIdentifier, username });
-      setTimeout(() => {
-        setIsLoading(false);
-        router.push("/profile/3");
-      }, 1000);
-    } catch (error) {
-      console.error("保存エラー:", error);
-      setIsLoading(false);
+  // 画像選択
+  const onPickAvatar = (file: File | null) => {
+    setAvatarFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setAvatarPreviewUrl(url);
+    } else {
+      setAvatarPreviewUrl(null);
     }
   };
 
-  const handleBack = () => {
-    console.log("前のページに戻る");
+  // 保存処理：profiles を更新 + 画像あれば Storage に保存（RLS: auth.uid() = id）
+  const handleNext = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setErrors((e) => ({ ...e, form: "" }));
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setErrors({ form: "ログインしてください" });
+        setIsLoading(false);
+        return;
+      }
+
+      // 念のため：public_id 生成の衝突時は数回リトライ
+      let chosenId = userIdentifier;
+      if (identifierAvailable !== true) {
+        for (let i = 0; i < 3; i++) {
+          const candidate = generateUserIdentifier();
+          const { data } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("public_id", candidate)
+            .limit(1);
+          if ((data?.length ?? 0) === 0) {
+            chosenId = candidate;
+            break;
+          }
+        }
+      }
+
+      // まず username / public_id を更新
+      const { error: updateErr1 } = await supabase
+        .from("profiles")
+        .update({ username, public_id: chosenId })
+        .eq("id", user.id);
+
+      if (updateErr1) {
+        // @ts-ignore
+        if (updateErr1.code === "23505") {
+          setErrors({ form: "すでに使用されている名前/IDです。別のものを試してください。" });
+        } else {
+          setErrors({ form: updateErr1.message ?? "保存に失敗しました" });
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // 画像が選択されていれば、アップロード → URL を profiles.avatar_url に保存
+      let avatarUrl: string | null = null;
+      if (avatarFile) {
+        setIsUploadingAvatar(true);
+        const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "png";
+        const path = `${user.id}/avatar.${ext}`;
+
+        // Storage へアップロード（同名上書き）
+        const { error: upErr } = await supabase.storage
+          .from("avatars")
+          .upload(path, avatarFile, {
+            upsert: true,
+            contentType: avatarFile.type || "image/png",
+            cacheControl: "3600",
+          });
+
+        if (upErr) {
+          console.error("avatar upload error:", upErr);
+          // 画像は後で設定できるので致命的にしない
+        } else {
+          // 公開バケット運用なら public URL、非公開ならここでは path を保存してサーバーで署名URL生成
+          const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+          avatarUrl = data.publicUrl;
+
+          const { error: updateErr2 } = await supabase
+            .from("profiles")
+            .update({ avatar_url: avatarUrl })
+            .eq("id", user.id);
+
+          if (updateErr2) {
+            console.error("avatar url update error:", updateErr2);
+          }
+        }
+        setIsUploadingAvatar(false);
+      }
+
+      setIsLoading(false);
+      router.push("/onboarding/1");// 必要に応じて変更
+    } catch (e: any) {
+      console.error("保存エラー:", e);
+      setErrors({ form: "保存中にエラーが発生しました" });
+      setIsLoading(false);
+      setIsUploadingAvatar(false);
+    }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    console.log("コピーしました:", text);
-  };
+  const handleBack = () => router.back();
+
+  const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
   return (
     <div className="min-h-dvh w-full bg-neutral-900">
@@ -160,12 +294,19 @@ const UsernameSetupPage = () => {
             </CardHeader>
 
             <CardContent className="space-y-6">
+              {/* サーバーエラー */}
+              {errors.form && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-700">{errors.form}</AlertDescription>
+                </Alert>
+              )}
+
               {/* ユーザーID */}
               <div className="space-y-2">
                 <Label htmlFor="userIdentifier" className="flex items-center gap-2">
                   <AtSign className="w-4 h-4" />
                   ユーザーID
-                  <span className="text-xs text-gray-500">（他の人からの検索やメンションで使用）</span>
+                  <span className="text-xs text-gray-500">（検索やメンションで使用）</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -231,7 +372,7 @@ const UsernameSetupPage = () => {
                 <Label htmlFor="username" className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4" />
                   表示名・ニックネーム
-                  <span className="text-xs text-gray-500">（コミュニティ内で表示される名前）</span>
+                  <span className="text-xs text-gray-500">（コミュニティ内で表示）</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -277,11 +418,55 @@ const UsernameSetupPage = () => {
                 </p>
               </div>
 
+              {/* アバター画像アップロード */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" />
+                  プロフィール画像（任意）
+                </Label>
+
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => onPickAvatar(e.target.files?.[0] ?? null)}
+                    className="max-w-xs"
+                  />
+                  {avatarFile ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onPickAvatar(null)}
+                      className="h-8"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      取り消す
+                    </Button>
+                  ) : null}
+                </div>
+
+                {avatarPreviewUrl && (
+                  <div className="mt-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={avatarPreviewUrl}
+                      alt="avatar preview"
+                      className="w-20 h-20 rounded-full object-cover ring-2 ring-white shadow"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      アップロードは「次へ進む」で保存されます
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* 説明 */}
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>ユーザーID</strong>は他の人があなたを検索する時に使用され、<strong>表示名</strong>は投稿やコメントに表示される名前です。
+                  <strong>ユーザーID</strong>は他の人があなたを検索する時に使用され、
+                  <strong>表示名</strong>は投稿やコメントに表示される名前です。画像は後から変更できます。
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -301,12 +486,13 @@ const UsernameSetupPage = () => {
                 !username ||
                 identifierAvailable !== true ||
                 usernameAvailable !== true ||
-                isLoading
+                isLoading ||
+                isUploadingAvatar
               }
               size="lg"
               className="px-8 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
             >
-              {isLoading ? (
+              {isLoading || isUploadingAvatar ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                   保存中...
