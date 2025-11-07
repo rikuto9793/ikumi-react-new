@@ -29,7 +29,7 @@ const ChatPage: React.FC = () => {
   const router = useRouter();
   const goToLives  = () => router.push("/live");
   const goToSearch = () => router.push("/search");
-  const goToHome   = () => router.push("/profile/5");
+  const goToHome   = () => router.push("/home");
   const goToVideos = () => router.push("/profile/6");
   const goToChat   = () => router.push("/chatmama"); // 自ページ想定（必要に応じて変更）
 

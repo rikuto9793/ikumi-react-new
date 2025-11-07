@@ -19,7 +19,7 @@ const VideoScrollUI: React.FC = () => {
   const router = useRouter();
 
   const goToHomes = () => {
-    router.push("/profile/5");
+    router.push("/home");
   };
 
   const goToLives = () => {
