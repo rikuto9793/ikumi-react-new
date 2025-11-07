@@ -4,15 +4,19 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, Search, Home, MessageCircle, Play, Monitor, Users, MapPin, Baby, Calendar } from 'lucide-react';
 import { createClient } from "@/utils/supabase/client";
+import SlideDrawer from "@/components/navigation/SlideDrawer";
+import HomeSkeleton from "@/components/skeletons/HomeSkeleton";
 
 
 const AppHomeScreen: React.FC = () => {
   const [profile, setProfile] = React.useState<any>(null);
 
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+
   const router = useRouter();
 
   const goToVideos = () => {
-    router.push("/profile/6");
+    router.push("/demos/profile/6");
   };
 
   const goToLives = () => {
@@ -50,25 +54,40 @@ const AppHomeScreen: React.FC = () => {
 
   // ✅ プロフィールがまだ取れてない時の表示（任意）
   if (!profile) {
-    return <div className="flex items-center justify-center h-screen">読み込み中...</div>;
+    return <HomeSkeleton />;
   }
 
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
+      {/* ③ SlideDrawer をルート直下に配置（ヘッダーより外側に出すのがポイント） */}
+      <SlideDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        profile={{
+          username: profile?.username,
+          email: profile?.email,
+          avatar_url: profile?.avatar_url,
+        }}
+      />
+
       {/* ヘッダー */}
       <header className="bg-white/90 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-4">
-            <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+            {/* ④ メニューボタンで open */}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="メニューを開く"
+            >
+              <Menu className="w-6 h-6 text-gray-700" />
             </button>
             <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               Ikumi
             </h1>
           </div>
+
 
           {/* 検索バー */}
           <div className="flex-1 max-w-md mx-4">
