@@ -89,7 +89,7 @@ const UploadVideoCard: React.FC = () => {
         動画をアップロード
       </h2>
       <p className="text-sm text-gray-600 mb-4">
-        あなたの配信やレクチャー動画をアップロードして、あとで一覧から見返せるようにします。
+        あなたの配信やレクチャー動画をアップロードして、あとで一覧から見返せるようにします！
       </p>
 
       <div className="space-y-3">
