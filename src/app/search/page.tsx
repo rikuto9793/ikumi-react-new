@@ -202,7 +202,7 @@ const InstructorsListPC: React.FC = () => {
   const router = useRouter();
 
   const goToHomes = () => {
-    router.push("/profile/5");
+    router.push("/home");
   };
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"おすすめ" | "レビュー" | "料金が安い">("おすすめ");

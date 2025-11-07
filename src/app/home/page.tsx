@@ -10,8 +10,11 @@ import {
   Monitor,
   MapPin,
   Baby,
+  Menu,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import SlideDrawer from "@/components/navigation/SlideDrawer";
+import HomeSkeleton from "@/components/skeletons/HomeSkeleton";
 
 // ✅ 動画アップロード用カードコンポーネント
 const UploadVideoCard: React.FC = () => {
@@ -51,13 +54,12 @@ const UploadVideoCard: React.FC = () => {
       }
 
       // 保存パス（userId/タイムスタンプ_元ファイル名）
-      const ext = file.name.split(".").pop();
       const fileName = `${Date.now()}-${file.name}`;
       const filePath = `${user.id}/${fileName}`;
 
       // Storage にアップロード（videos バケット）
       const { error: uploadError } = await supabase.storage
-        .from("videos") // ← 作成したバケット名
+        .from("videos")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
@@ -85,9 +87,7 @@ const UploadVideoCard: React.FC = () => {
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-8">
-      <h2 className="text-lg font-semibold text-gray-800 mb-2">
-        動画をアップロード
-      </h2>
+      <h2 className="text-lg font-semibold text-gray-800 mb-2">動画をアップロード</h2>
       <p className="text-sm text-gray-600 mb-4">
         あなたの配信やレクチャー動画をアップロードして、あとで一覧から見返せるようにします！
       </p>
@@ -119,14 +119,8 @@ const UploadVideoCard: React.FC = () => {
 
         {uploadedUrl && (
           <div className="mt-4">
-            <p className="text-xs text-gray-600 mb-1">
-              アップロードされた動画（プレビュー）
-            </p>
-            <video
-              src={uploadedUrl}
-              controls
-              className="w-full rounded-xl border border-gray-200"
-            />
+            <p className="text-xs text-gray-600 mb-1">アップロードされた動画（プレビュー）</p>
+            <video src={uploadedUrl} controls className="w-full rounded-xl border border-gray-200" />
           </div>
         )}
       </div>
@@ -136,29 +130,21 @@ const UploadVideoCard: React.FC = () => {
 
 const AppHomeScreen: React.FC = () => {
   const [profile, setProfile] = React.useState<any>(null);
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
   const router = useRouter();
 
+  // feature_video の挙動を採用
   const goToVideos = () => {
-  router.push("/my-videos");
-};
-
-
-  const goToLives = () => {
-    router.push("/live");
+    router.push("/my-videos");
   };
 
-  const goToSearch = () => {
-    router.push("/search");
-  };
-
-  const goToChat = () => {
-    router.push("/chatmama");
-  };
+  const goToLives = () => router.push("/live");
+  const goToSearch = () => router.push("/search");
+  const goToChat = () => router.push("/chatmama");
 
   React.useEffect(() => {
     const fetchProfile = async () => {
       const supabase = createClient();
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -178,34 +164,34 @@ const AppHomeScreen: React.FC = () => {
     fetchProfile();
   }, []);
 
+  // mainのスケルトンUIを採用
   if (!profile) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        読み込み中...
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
+      {/* SlideDrawer */}
+      <SlideDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        profile={{
+          username: profile?.username,
+          email: profile?.email,
+          avatar_url: profile?.avatar_url,
+        }}
+      />
+
       {/* ヘッダー */}
       <header className="bg-white/90 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-4">
-            <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-              <svg
-                className="w-6 h-6 text-gray-700"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              aria-label="メニューを開く"
+            >
+              <Menu className="w-6 h-6 text-gray-700" />
             </button>
             <h1 className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               Ikumi
@@ -220,19 +206,7 @@ const AppHomeScreen: React.FC = () => {
                 placeholder="動画を検索..."
                 className="w-full px-4 py-2 pl-10 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
               />
-              <svg
-                className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z"
-                />
-              </svg>
+              <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
             </div>
           </div>
 
@@ -258,16 +232,12 @@ const AppHomeScreen: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
             {profile?.username || "ユーザー"}
           </h1>
-          <p className="text-gray-600">
-            {profile?.bio || "よろしくお願いします！"}
-          </p>
+          <p className="text-gray-600">{profile?.bio || "よろしくお願いします！"}</p>
         </div>
 
         {/* プロフィール情報カード */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            プロフィール
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">プロフィール</h2>
 
           {/* フォロワー・フォロー中・配信本数 */}
           <div className="grid grid-cols-3 gap-4 mb-6">
@@ -302,16 +272,14 @@ const AppHomeScreen: React.FC = () => {
                 <MapPin className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-gray-800 text-sm">
-                  住んでいる町
-                </p>
+                <p className="font-medium text-gray-800 text-sm">住んでいる町</p>
                 <p className="text-xs text-gray-600">東京都渋谷区</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 🔻 ここにアップロードカードを差し込む */}
+        {/* アップロードカード */}
         <UploadVideoCard />
 
         {/* 機能カード */}
@@ -360,9 +328,7 @@ const AppHomeScreen: React.FC = () => {
             <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mb-1">
               <Home className="w-4 h-4 text-white" />
             </div>
-            <span className="text-xs text-purple-600 font-medium">
-              ホーム
-            </span>
+            <span className="text-xs text-purple-600 font-medium">ホーム</span>
           </button>
 
           <button
