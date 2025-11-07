@@ -24,26 +24,6 @@
     ],
     "description": "縦並び。justify(主軸)-で上下の揃えを、items(交差軸)-で左右の揃えをします"
   },
-    "背景レイヤー": {
-    "prefix": "vstack_bg",
-    "body": [
-      "{/* 背景レイヤー */}",
-      "<div className=\"flex flex-col items-center absolute inset-0 z-0$1 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50\">",
-      "  $0",
-      "</div>"
-    ],
-    "description": "縦並び。justify(主軸)-で上下の揃えを、items(交差軸)-で左右の揃えをします"
-  },
-      "メインレイヤー": {
-    "prefix": "vstack_bg",
-    "body": [
-      "{/* メインコンテンツレイヤー */}",
-      "<div className=\"flex flex-col items-center absolute inset-0 z-0$1\">",
-      "  $0",
-      "</div>"
-    ],
-    "description": "縦並び。justify(主軸)-で上下の揃えを、items(交差軸)-で左右の揃えをします"
-  },
   "通常のHStack": {
     "prefix": "hstack",
     "body": [
@@ -70,7 +50,7 @@
   "Textテンプレ": {
     "prefix": "text",
     "body": [
-      "<p className=\"text-base font-normal text-gray-800\">",
+      "<p className=\"text-center text-base font-normal text-gray-800\">",
       "  $0",
       "</p>"
     ],

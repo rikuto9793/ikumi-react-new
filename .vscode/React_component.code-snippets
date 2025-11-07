@@ -1,44 +1,4 @@
 {
-  "ReactのAND": {
-    "prefix": "and",
-    "body": ["&&"],
-    "description": "and → &&"
-  },
-  "ReactのOR": {
-    "prefix": "or",
-    "body": ["||"],
-    "description": "or → ||"
-  },
-	"ReactのOR(型指定の時)": {
-    "prefix": "or",
-    "body": ["|"],
-    "description": "or → ||"
-  },
-  "ReactのEQUAL": {
-    "prefix": "eq",
-    "body": ["==="],
-    "description": "eq → ==="
-  },
-  "ReactのNOT EQUAL": {
-    "prefix": "noteq",
-    "body": ["!=="],
-    "description": "neq → !=="
-  },
-  "ReactのTERNARY OPERATOR": {
-    "prefix": "ternary",
-    "body": ["${1:condition} ? ${2:trueValue} : ${3:falseValue}"],
-    "description": "条件式 ? 真なら : 偽なら"
-  },
-  "ReactのARROW FUNCTION": {
-    "prefix": "arrow",
-    "body": ["(${1:args}) => ${2:body}"],
-    "description": "Arrow function → (args) => body"
-  },
-  "ReactのLOG": {
-    "prefix": "clog",
-    "body": ["console.log(${1});"],
-    "description": "console.log(...)"
-  },
 	"Imageスニペット": {
 		"prefix": "img",
 		"body": [
@@ -88,7 +48,7 @@
 			"  type=\"text\"",
 			"  name=\"$1\"",
 			"  placeholder=\"$2\"",
-			"  className=\"input input-bordered w-full border-2 border-gray-100\"",
+			"  className=\"input input-bordered w-full\"",
 			"/>"
 		],
 		"description": "daisyUI の基本的なテキストフィールド"
@@ -155,22 +115,22 @@
 		],
 		"description": "e.target.valueで現在の入力値を取得"
 	},
-	"async fetch関数（POST + JSON）": {
-		"prefix": "asyncfetch",
-		"body": [
-			"async function $1() {",
+  "async fetch関数（POST + JSON）": {
+    "prefix": "asyncfetch",
+    "body": [
+      "async function $1() {",
 			"  // 実際の処理内容.",
-			"  // fetchでリクエスト送って、そのレスポンスが response に入る.この一連の動作が終わるまで次に進まないように await.",
-			"  const response = await fetch(\"$2\", {",
-			"    method: \"POST\",",
-			"    headers: { \"Content-Type\": \"application/json\" },",
-			"    body: JSON.stringify({ $3 })",
-			"  });",
-			"",
-			"  const data = await response.json();  // レスポンスの中身を取り出す（非同期）",
-			"  console.log(data);",
-			"}"
-		],
-		"description": "async 関数内で fetch POST してレスポンス受け取る構造"
-	}
+      "  // fetchでリクエスト送って、そのレスポンスが response に入る.この一連の動作が終わるまで次に進まないように await.",
+      "  const response = await fetch(\"$2\", {",
+      "    method: \"POST\",",
+      "    headers: { \"Content-Type\": \"application/json\" },",
+      "    body: JSON.stringify({ $3 })",
+      "  });",
+      "",
+      "  const data = await response.json();  // レスポンスの中身を取り出す（非同期）",
+      "  console.log(data);",
+      "}"
+    ],
+    "description": "async 関数内で fetch POST してレスポンス受け取る構造"
+  }
 }
