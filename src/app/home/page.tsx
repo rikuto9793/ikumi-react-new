@@ -16,8 +16,9 @@ import { createClient } from "@/utils/supabase/client";
 import SlideDrawer from "@/components/navigation/SlideDrawer";
 import HomeSkeleton from "@/components/skeletons/HomeSkeleton";
 
-// ✅ 動画アップロード用カードコンポーネント
+// ✅ 動画アップロードカード
 const UploadVideoCard: React.FC = () => {
+  const [title, setTitle] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
   const [uploading, setUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -40,24 +41,21 @@ const UploadVideoCard: React.FC = () => {
 
     try {
       const supabase = createClient();
-
-      // ログインユーザー取得
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
+        console.error(userError);
         setError("ログイン情報を取得できませんでした。");
         setUploading(false);
         return;
       }
 
-      // 保存パス（userId/タイムスタンプ_元ファイル名）
       const fileName = `${Date.now()}-${file.name}`;
       const filePath = `${user.id}/${fileName}`;
 
-      // Storage にアップロード（videos バケット）
       const { error: uploadError } = await supabase.storage
         .from("videos")
         .upload(filePath, file, {
@@ -72,10 +70,29 @@ const UploadVideoCard: React.FC = () => {
         return;
       }
 
-      // 公開URL取得（テスト用にプレビュー表示）
       const { data } = supabase.storage.from("videos").getPublicUrl(filePath);
-      setUploadedUrl(data.publicUrl);
+      const publicUrl = data.publicUrl;
+      setUploadedUrl(publicUrl);
 
+      const res = await fetch("/api/videos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title || file.name,
+          user_id: user.id,
+          public_url: publicUrl,
+          storage_path: filePath,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error(await res.text());
+        setError("動画情報の保存に失敗しました。");
+        setUploading(false);
+        return;
+      }
+
+      setTitle("");
       setFile(null);
       setUploading(false);
     } catch (e) {
@@ -93,6 +110,14 @@ const UploadVideoCard: React.FC = () => {
       </p>
 
       <div className="space-y-3">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="動画のタイトルを入力"
+          className="w-full mb-1 px-3 py-2 border border-gray-300 rounded-full text-sm"
+        />
+
         <input
           type="file"
           accept="video/*"
@@ -128,19 +153,19 @@ const UploadVideoCard: React.FC = () => {
   );
 };
 
+// ✅ メインページ
 const AppHomeScreen: React.FC = () => {
   const [profile, setProfile] = React.useState<any>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const router = useRouter();
 
-  // feature_video の挙動を採用
-  const goToVideos = () => {
-    router.push("/my-videos");
-  };
-
+  // ✅ ページ遷移関数
   const goToLives = () => router.push("/live");
   const goToSearch = () => router.push("/search");
   const goToChat = () => router.push("/chatmama");
+  const goToHome = () => router.push("/home");
+  const goToMyVideos = () => router.push("/my-videos"); // ← カード用
+  const goToAllVideos = () => router.push("/videos");   // ← フッター動画タブ用
 
   React.useEffect(() => {
     const fetchProfile = async () => {
@@ -164,14 +189,10 @@ const AppHomeScreen: React.FC = () => {
     fetchProfile();
   }, []);
 
-  // mainのスケルトンUIを採用
-  if (!profile) {
-    return <HomeSkeleton />;
-  }
+  if (!profile) return <HomeSkeleton />;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-purple-50">
-      {/* SlideDrawer */}
       <SlideDrawer
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -216,9 +237,8 @@ const AppHomeScreen: React.FC = () => {
         </div>
       </header>
 
-      {/* メインコンテンツ */}
+      {/* メイン */}
       <main className="flex-1 px-4 py-8 pb-28">
-        {/* 中央：ユーザーアイコン */}
         <div className="flex items-center justify-center">
           <div className="w-20 h-20 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
@@ -227,7 +247,6 @@ const AppHomeScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* 名前と自己紹介 */}
         <div className="text-center mb-8 mt-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
             {profile?.username || "ユーザー"}
@@ -235,11 +254,9 @@ const AppHomeScreen: React.FC = () => {
           <p className="text-gray-600">{profile?.bio || "よろしくお願いします！"}</p>
         </div>
 
-        {/* プロフィール情報カード */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-8">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">プロフィール</h2>
 
-          {/* フォロワー・フォロー中・配信本数 */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="text-center">
               <div className="text-xl font-bold text-gray-800">1,234</div>
@@ -255,7 +272,6 @@ const AppHomeScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* 詳細情報 */}
           <div className="space-y-3">
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-pink-50 to-purple-50">
               <div className="w-8 h-8 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
@@ -279,10 +295,9 @@ const AppHomeScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* アップロードカード */}
         <UploadVideoCard />
 
-        {/* 機能カード */}
+        {/* カード群 */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
             <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 rounded-xl flex items-center justify-center mb-4">
@@ -292,34 +307,29 @@ const AppHomeScreen: React.FC = () => {
             <p className="text-sm text-gray-600">配信を探す</p>
           </div>
 
+          {/* 🎬 お気に入り動画カード → /my-videos */}
           <div
-            onClick={goToVideos}
+            onClick={goToMyVideos}
             className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
           >
             <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl flex items-center justify-center mb-4">
               <Play className="w-6 h-6 text-white" />
             </div>
             <h3 className="font-semibold text-gray-800 mb-1">動画</h3>
-            <p className="text-sm text-gray-600">お気に入り動画</p>
+            <p className="text-sm text-gray-600">My Videos</p>
           </div>
         </div>
       </main>
 
-      {/* ボトムナビゲーション */}
+      {/* フッターナビ */}
       <nav className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-sm border-t border-gray-200">
         <div className="flex items-center justify-around py-2">
-          <button
-            onClick={goToLives}
-            className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={goToLives} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <Monitor className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">配信</span>
           </button>
 
-          <button
-            onClick={goToSearch}
-            className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={goToSearch} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <Search className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">検索</span>
           </button>
@@ -331,18 +341,13 @@ const AppHomeScreen: React.FC = () => {
             <span className="text-xs text-purple-600 font-medium">ホーム</span>
           </button>
 
-          <button
-            onClick={goToChat}
-            className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={goToChat} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <MessageCircle className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">チャット</span>
           </button>
 
-          <button
-            onClick={goToVideos}
-            className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors"
-          >
+          {/* 🎥 フッター動画タブ → /videos */}
+          <button onClick={goToAllVideos} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <Play className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">動画</span>
           </button>
@@ -353,3 +358,4 @@ const AppHomeScreen: React.FC = () => {
 };
 
 export default AppHomeScreen;
+
