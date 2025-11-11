@@ -128,31 +128,40 @@ const MyVideosPage: React.FC = () => {
           </div>
         )}
 
-        {/* 動画リスト */}
-        {!loading &&
-          !error &&
-          videos.map((v) => (
-            <div
-              key={v.url}
-              className="bg-white/90 rounded-2xl shadow-sm border border-pink-100 p-4 space-y-2"
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-800 truncate max-w-[70%]">
-                  {v.name}
-                </p>
-                {v.createdAt && (
-                  <span className="text-[11px] text-gray-500">
-                    {new Date(v.createdAt).toLocaleString("ja-JP")}
-                  </span>
-                )}
+        {/* 動画グリッド */}
+        {!loading && !error && videos.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {videos.map((v) => (
+              <div
+                key={v.url}
+                className="bg-white/90 rounded-xl shadow-sm border border-pink-100 overflow-hidden"
+              >
+                <div className="relative aspect-[3/4] bg-gray-100">
+                  <video
+                    src={v.url}
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-2 space-y-0.5">
+                  <p className="text-[10px] font-medium text-gray-800 truncate">
+                    {v.name}
+                  </p>
+                  {v.createdAt && (
+                    <span className="text-[9px] text-gray-400 block">
+                      {new Date(v.createdAt).toLocaleString("ja-JP", {
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  )}
+                </div>
               </div>
-              <video
-                src={v.url}
-                controls
-                className="w-full rounded-xl border border-gray-200"
-              />
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

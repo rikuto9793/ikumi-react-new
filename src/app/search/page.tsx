@@ -267,7 +267,7 @@ const InstructorsListPC: React.FC = () => {
                 マイページ
               </button>
               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 flex items-center justify-center text-white font-semibold cursor-pointer">
-                あ
+                👤
               </div>
             </div>
           </div>

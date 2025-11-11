@@ -300,7 +300,7 @@ const AppHomeScreen: React.FC = () => {
         {/* カード群 */}
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 rounded-xl flex items-center justify-center mb-4">
+            <div onClick={goToLives} className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 rounded-xl flex items-center justify-center mb-4">
               <Monitor className="w-6 h-6 text-white" />
             </div>
             <h3 className="font-semibold text-gray-800 mb-1">ライブ配信</h3>
