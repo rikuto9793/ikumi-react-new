@@ -30,7 +30,7 @@ const ChatPage: React.FC = () => {
   const goToLives  = () => router.push("/live");
   const goToSearch = () => router.push("/search");
   const goToHome   = () => router.push("/home");
-  const goToVideos = () => router.push("/profile/6");
+  const goToVideos = () => router.push("/videos");
   const goToChat   = () => router.push("/chatmama"); // 自ページ想定（必要に応じて変更）
 
   const [messages, setMessages] = useState<ChatMessage[]>([

@@ -37,6 +37,8 @@ const VideoScrollUI: React.FC = () => {
         }
         const data = await res.json();
         setVideos(data);
+        console.log("🎥 取得した動画データ:", data);
+
       } catch (e) {
         console.error("動画取得に失敗しました", e);
         setError("動画の取得に失敗しました。時間をおいて再度お試しください。");
@@ -133,18 +135,21 @@ const VideoScrollUI: React.FC = () => {
                 key={video.id}
                 className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer"
               >
-                {/* サムネイル */}
+                {/* サムネイル（動画） */}
                 <div className="relative">
-                  <img
-                    src={video.thumbnail}
-                    alt={video.title}
+                  <video
+                    src={video.thumbnail}  // ← Supabaseの.MOV URL
                     className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    muted
+                    playsInline
+                    preload="metadata"
                   />
-                  {/* 動画時間（今はダミー） */}
+                  {/* 再生時間ラベル */}
                   <div className="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-sm font-medium">
                     {video.duration}
                   </div>
                 </div>
+
 
                 {/* 動画情報 */}
                 <div className="p-4">
@@ -159,8 +164,8 @@ const VideoScrollUI: React.FC = () => {
                       <span>
                         {video.uploadTime
                           ? new Date(video.uploadTime).toLocaleDateString(
-                              "ja-JP"
-                            )
+                            "ja-JP"
+                          )
                           : ""}
                       </span>
                     </div>

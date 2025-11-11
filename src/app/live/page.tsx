@@ -22,8 +22,9 @@ const LiveStreamPage: React.FC = () => {
   const router = useRouter();
   const goToLives = () => router.push("/live");
   const goToSearch = () => router.push("/search");
-  const goToHome = () => router.push("/profile/5");
-  const goToVideos = () => router.push("/profile/6");
+  const goToHome = () => router.push("/home");
+  const goToVideos = () => router.push("/videos");
+  const goToChat = () => router.push("/chatmama");
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: 1, user: "あやママ", avatar: "あ", text: "離乳食作り頑張って！応援してます✨", timestamp: new Date() },
@@ -236,7 +237,7 @@ const LiveStreamPage: React.FC = () => {
             <span className="text-xs text-gray-600 font-medium">ホーム</span>
           </button>
 
-          <button className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
+          <button onClick={goToChat} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
             <MessageCircle className="w-6 h-6 text-gray-600 mb-1" />
             <span className="text-xs text-gray-600">チャット</span>
           </button>
