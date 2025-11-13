@@ -2,14 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Send,
-  Monitor,
-  Search as SearchIcon,
-  Home as HomeIcon,
-  MessageCircle,
-  Play,
-} from "lucide-react";
+import { Send } from "lucide-react";
+import BottomNav from "@/components/navigation/BottomNav";
 
 interface ChatMessage {
   id: number;
@@ -18,30 +12,27 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-/** ▼ 高さを“固定値”で統一（被り防止のキモ） */
-const TAB_BAR_H = 64;   // 下ナビの高さ（AppHomeScreen と同じ見た目）
-const INPUT_BAR_H = 64; // 入力バーの高さ
+/** ▼ 高さは固定値で統一 */
+const TAB_BAR_H = 64;    // BottomNav の見た目の高さ
+const INPUT_BAR_H = 64;  // 入力バーの高さ
+const EXTRA_BOTTOM_SPACE_MESSAGES = 24; // メッセージ末尾の余白（調整用）
+const SAFE_BOTTOM = "env(safe-area-inset-bottom, 0px)"; // ← 追加
 
 const formatTime = (d: Date) =>
   new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(d);
 
 const ChatPage: React.FC = () => {
   const router = useRouter();
-  const goToLives  = () => router.push("/live");
-  const goToSearch = () => router.push("/search");
-  const goToHome   = () => router.push("/home");
-  const goToVideos = () => router.push("/videos");
-  const goToChat   = () => router.push("/chatmama"); // 自ページ想定（必要に応じて変更）
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: 1, sender: "veteran", text: "こんにちは！今日はどんなことで困ってますか？😊", timestamp: new Date() },
-    { id: 2, sender: "newbie",  text: "離乳食を始めたばかりで、どんな食材からがいいのか不安です…", timestamp: new Date() },
+    { id: 2, sender: "newbie", text: "離乳食を始めたばかりで、どんな食材からがいいのか不安です…", timestamp: new Date() },
     { id: 3, sender: "veteran", text: "いい質問ですね！最初はにんじんやかぼちゃのペーストがおすすめですよ🥕🎃", timestamp: new Date() },
-    { id: 4, sender: "newbie",  text: "やっぱり甘めの野菜からがいいんですね！ブレンダーを使っても大丈夫ですか？", timestamp: new Date() },
+    { id: 4, sender: "newbie", text: "やっぱり甘めの野菜からがいいんですね！ブレンダーを使っても大丈夫ですか？", timestamp: new Date() },
     { id: 5, sender: "veteran", text: "もちろんOK。なめらかになって食べやすいです✨", timestamp: new Date() },
-    { id: 6, sender: "newbie",  text: "保存はどうしたら？まとめて作って冷凍でも平気？", timestamp: new Date() },
+    { id: 6, sender: "newbie", text: "保存はどうしたら？まとめて作って冷凍でも平気？", timestamp: new Date() },
     { id: 7, sender: "veteran", text: "製氷皿に小分けで冷凍🧊 1週間以内を目安に使い切ってね。", timestamp: new Date() },
-    { id: 8, sender: "newbie",  text: "助かります！ありがとうございます😊", timestamp: new Date() },
+    { id: 8, sender: "newbie", text: "助かります！ありがとうございます😊", timestamp: new Date() },
   ]);
 
   const [input, setInput] = useState("");
@@ -84,7 +75,7 @@ const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="relative h-[100dvh] w-[100vw] bg-gradient-to-br from-pink-50 to-purple-50 text-gray-900 flex flex-col">
+    <div className="relative min-h-[100svh] w-[100vw] bg-gradient-to-br from-pink-50 to-purple-50 text-gray-900 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-sm border-b border-gray-200">
         <div className="flex items-center justify-between px-4 py-3">
@@ -101,16 +92,17 @@ const ChatPage: React.FC = () => {
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
-        style={{ paddingBottom: TAB_BAR_H + INPUT_BAR_H + 16 }}
+        style={{
+          paddingBottom: `calc(${INPUT_BAR_H}px + ${TAB_BAR_H}px + ${EXTRA_BOTTOM_SPACE_MESSAGES}px + ${SAFE_BOTTOM})`,
+        }}
       >
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === "newbie" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[75%] px-3 py-2 rounded-xl text-sm shadow-sm leading-snug ${
-                msg.sender === "newbie"
+              className={`max-w-[75%] px-3 py-2 rounded-xl text-sm shadow-sm leading-snug ${msg.sender === "newbie"
                   ? "bg-purple-500 text-white rounded-br-none"
                   : "bg-pink-100 text-gray-800 rounded-bl-none"
-              }`}
+                }`}
             >
               {msg.text}
               <div className={`mt-1 text-[10px] ${msg.sender === "newbie" ? "text-purple-100/90" : "text-gray-500"}`}>
@@ -121,66 +113,47 @@ const ChatPage: React.FC = () => {
         ))}
       </div>
 
-      {/* ▼ 入力バー（ナビの“外”＝上に固定） */}
+      {/* ▼ 固定レイヤー（上：入力バー / 下：ボトムナビ） */}
       <div
-        className="fixed inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-gray-200"
-        style={{ bottom: `calc(${TAB_BAR_H}px + env(safe-area-inset-bottom))`, height: INPUT_BAR_H }}
+        className="fixed inset-x-0 bottom-0 z-30 pointer-events-none"
+        style={{ bottom: `calc(${TAB_BAR_H}px + ${SAFE_BOTTOM})` }} // ← ここだけ変更
       >
-        <div className="max-w-screen-sm mx-auto h-full px-4">
-          <div className="flex h-full items-center gap-2 border border-gray-300 rounded-full px-3 bg-white focus-within:ring-2 focus-within:ring-pink-500">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onCompositionStart={() => setIsComposing(true)}
-              onCompositionEnd={() => setIsComposing(false)}
-              placeholder="メッセージを入力..."
-              className="flex-1 text-sm outline-none"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white grid place-items-center disabled:opacity-40"
-            >
-              <Send size={14} />
-            </button>
+        {/* 入力バー */}
+        <div
+          className="bg-white/95 backdrop-blur border-t border-gray-200 mb-8"
+          style={{ height: INPUT_BAR_H, paddingBottom: SAFE_BOTTOM }}
+        >
+          <div className="max-w-screen-sm mx-auto h-full px-4 pointer-events-auto">
+            <div className="flex h-full items-center gap-2 border border-gray-300 rounded-full px-3 bg-white focus-within:ring-2 focus-within:ring-pink-500">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onCompositionStart={() => setIsComposing(true)}
+                onCompositionEnd={() => setIsComposing(false)}
+                placeholder="メッセージを入力..."
+                className="flex-1 text-sm outline-none"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white grid place-items-center disabled:opacity-40"
+              >
+                <Send size={14} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ▼ ボトムナビ（AppHomeScreen と統一） */}
-      <nav className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-sm border-t border-gray-200 z-20">
-        <div className="flex items-center justify-around h-[64px]">
-          <button onClick={goToLives} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <Monitor className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">配信</span>
-          </button>
-
-          <button onClick={goToSearch} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <SearchIcon className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">検索</span>
-          </button>
-
-          {/* ホーム（アクティブ表示例） */}
-          <button onClick={goToHome} className="flex flex-col items-center py-2 px-3 rounded-lg bg-gradient-to-r from-pink-100 to-purple-100">
-            <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mb-1">
-              <HomeIcon className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xs text-purple-600 font-medium">ホーム</span>
-          </button>
-
-          <button onClick={goToChat} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <MessageCircle className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">チャット</span>
-          </button>
-
-          <button onClick={goToVideos} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <Play className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">動画</span>
-          </button>
-        </div>
-      </nav>
+      {/* ボトムナビ（固定は親が担当） */}
+      <div
+        className="bg-white/95 backdrop-blur border-t border-gray-200"
+        style={{ height: TAB_BAR_H }}
+      >
+        <BottomNav />
+      </div>
     </div>
   );
 };
