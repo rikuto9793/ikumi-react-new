@@ -15,6 +15,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import SlideDrawer from "@/components/navigation/SlideDrawer";
 import HomeSkeleton from "@/components/skeletons/HomeSkeleton";
+import BottomNav from "@/components/navigation/BottomNav";
 
 // ✅ 動画アップロードカード
 const UploadVideoCard: React.FC = () => {
@@ -322,37 +323,7 @@ const AppHomeScreen: React.FC = () => {
       </main>
 
       {/* フッターナビ */}
-      <nav className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-sm border-t border-gray-200">
-        <div className="flex items-center justify-around py-2">
-          <button onClick={goToLives} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <Monitor className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">配信</span>
-          </button>
-
-          <button onClick={goToSearch} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <Search className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">検索</span>
-          </button>
-
-          <button className="flex flex-col items-center py-2 px-3 rounded-lg bg-gradient-to-r from-pink-100 to-purple-100">
-            <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center mb-1">
-              <Home className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xs text-purple-600 font-medium">ホーム</span>
-          </button>
-
-          <button onClick={goToChat} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <MessageCircle className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">チャット</span>
-          </button>
-
-          {/* 🎥 フッター動画タブ → /videos */}
-          <button onClick={goToAllVideos} className="flex flex-col items-center py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors">
-            <Play className="w-6 h-6 text-gray-600 mb-1" />
-            <span className="text-xs text-gray-600">動画</span>
-          </button>
-        </div>
-      </nav>
+      <BottomNav/>
     </div>
   );
 };
