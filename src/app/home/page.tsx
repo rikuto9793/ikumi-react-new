@@ -4,20 +4,29 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  Home,
-  MessageCircle,
-  Play,
+  Menu,
   Monitor,
+  Play,
   MapPin,
   Baby,
-  Menu,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import SlideDrawer from "@/components/navigation/SlideDrawer";
 import HomeSkeleton from "@/components/skeletons/HomeSkeleton";
 import BottomNav from "@/components/navigation/BottomNav";
 
-// ✅ 動画アップロードカード
+// ==== Types ==========================================================
+type Profile = {
+  id: string;
+  username?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+  bio?: string | null;
+  children_info?: string | null; // ★ DB値を使う
+  location?: string | null;      // ★ DB値を使う
+};
+
+// ==== 動画アップロードカード =========================================
 const UploadVideoCard: React.FC = () => {
   const [title, setTitle] = React.useState("");
   const [file, setFile] = React.useState<File | null>(null);
@@ -54,7 +63,9 @@ const UploadVideoCard: React.FC = () => {
         return;
       }
 
-      const fileName = `${Date.now()}-${file.name}`;
+      // 一意なファイル名
+      const safeName = file.name.replace(/[^\w.\-]/g, "_");
+      const fileName = `${Date.now()}-${safeName}`;
       const filePath = `${user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -62,6 +73,7 @@ const UploadVideoCard: React.FC = () => {
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: false,
+          contentType: file.type || "video/mp4",
         });
 
       if (uploadError) {
@@ -93,6 +105,7 @@ const UploadVideoCard: React.FC = () => {
         return;
       }
 
+      // 成功リセット
       setTitle("");
       setFile(null);
       setUploading(false);
@@ -111,25 +124,31 @@ const UploadVideoCard: React.FC = () => {
       </p>
 
       <div className="space-y-3">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="動画のタイトルを入力"
-          className="w-full mb-1 px-3 py-2 border border-gray-300 rounded-full text-sm"
-        />
+        <label className="block">
+          <span className="sr-only">動画のタイトル</span>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="動画のタイトルを入力"
+            className="w-full mb-1 px-3 py-2 border border-gray-300 rounded-full text-sm"
+          />
+        </label>
 
-        <input
-          type="file"
-          accept="video/*"
-          onChange={handleFileChange}
-          className="block w-full text-sm text-gray-700
-                     file:mr-4 file:py-2 file:px-4
-                     file:rounded-full file:border-0
-                     file:text-sm file:font-semibold
-                     file:bg-pink-100 file:text-pink-700
-                     hover:file:bg-pink-200"
-        />
+        <label className="block">
+          <span className="sr-only">動画ファイル</span>
+          <input
+            type="file"
+            accept="video/*"
+            onChange={handleFileChange}
+            className="block w-full text-sm text-gray-700
+                       file:mr-4 file:py-2 file:px-4
+                       file:rounded-full file:border-0
+                       file:text-sm file:font-semibold
+                       file:bg-pink-100 file:text-pink-700
+                       hover:file:bg-pink-200"
+          />
+        </label>
 
         <button
           onClick={handleUpload}
@@ -137,6 +156,7 @@ const UploadVideoCard: React.FC = () => {
           className="inline-flex items-center justify-center px-4 py-2 rounded-full
                      bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-medium
                      disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-busy={uploading}
         >
           {uploading ? "アップロード中..." : "アップロードする"}
         </button>
@@ -146,7 +166,11 @@ const UploadVideoCard: React.FC = () => {
         {uploadedUrl && (
           <div className="mt-4">
             <p className="text-xs text-gray-600 mb-1">アップロードされた動画（プレビュー）</p>
-            <video src={uploadedUrl} controls className="w-full rounded-xl border border-gray-200" />
+            <video
+              src={uploadedUrl}
+              controls
+              className="w-full rounded-xl border border-gray-200"
+            />
           </div>
         )}
       </div>
@@ -154,40 +178,51 @@ const UploadVideoCard: React.FC = () => {
   );
 };
 
-// ✅ メインページ
+// ==== メインページ ====================================================
 const AppHomeScreen: React.FC = () => {
-  const [profile, setProfile] = React.useState<any>(null);
+  const [profile, setProfile] = React.useState<Profile | null>(null);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const router = useRouter();
 
-  // ✅ ページ遷移関数
+  // ページ遷移
   const goToLives = () => router.push("/live");
   const goToSearch = () => router.push("/search");
   const goToChat = () => router.push("/chatmama");
   const goToHome = () => router.push("/home");
-  const goToMyVideos = () => router.push("/my-videos"); // ← カード用
-  const goToAllVideos = () => router.push("/videos");   // ← フッター動画タブ用
+  const goToMyVideos = () => router.push("/my-videos"); // カード用
+  const goToAllVideos = () => router.push("/videos");   // フッター動画タブ用（BottomNav 側で参照する場合あり）
 
   React.useEffect(() => {
+    let cancelled = false;
+
     const fetchProfile = async () => {
       const supabase = createClient();
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+
+      if (!user) {
+        if (!cancelled) setProfile(null);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .single<Profile>();
 
-      if (!error && data) {
-        setProfile(data);
+      if (!cancelled) {
+        if (!error && data) setProfile(data);
+        else setProfile(null);
       }
     };
 
     fetchProfile();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!profile) return <HomeSkeleton />;
@@ -198,9 +233,9 @@ const AppHomeScreen: React.FC = () => {
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         profile={{
-          username: profile?.username,
-          email: profile?.email,
-          avatar_url: profile?.avatar_url,
+          username: profile?.username ?? "",
+          email: profile?.email ?? "",
+          avatar_url: profile?.avatar_url ?? "",
         }}
       />
 
@@ -226,14 +261,32 @@ const AppHomeScreen: React.FC = () => {
               <input
                 type="text"
                 placeholder="動画を検索..."
+                onFocus={goToSearch}
                 className="w-full px-4 py-2 pl-10 bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                aria-label="動画を検索"
               />
-              <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400 pointer-events-none" />
             </div>
           </div>
 
-          <div className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-sm">👤</span>
+          {/* ★変更: 右側アイコンをプロフィール画像に（overflow-hidden追加 & 条件表示） */}
+          <div
+            className="w-10 h-10 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center overflow-hidden"
+            aria-label="プロフィール"
+            role="button"
+            onClick={goToHome}
+          >
+            {profile?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatar_url}
+                alt="avatar"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span className="text-white font-bold text-sm">👤</span>
+            )}
           </div>
         </div>
       </header>
@@ -242,8 +295,18 @@ const AppHomeScreen: React.FC = () => {
       <main className="flex-1 px-4 py-8 pb-28">
         <div className="flex items-center justify-center">
           <div className="w-20 h-20 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-              <span className="text-pink-500 font-bold text-3xl">👤</span>
+            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center overflow-hidden">
+              {profile?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile.avatar_url}
+                  alt="avatar"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="text-pink-500 font-bold text-3xl">👤</span>
+              )}
             </div>
           </div>
         </div>
@@ -255,6 +318,7 @@ const AppHomeScreen: React.FC = () => {
           <p className="text-gray-600">{profile?.bio || "よろしくお願いします！"}</p>
         </div>
 
+        {/* ★プロフィールカード（DB値反映） */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-8">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">プロフィール</h2>
 
@@ -274,59 +338,68 @@ const AppHomeScreen: React.FC = () => {
           </div>
 
           <div className="space-y-3">
+            {/* お子様 */}
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-pink-50 to-purple-50">
               <div className="w-8 h-8 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
                 <Baby className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-gray-800 text-sm">お子様</p>
-                <p className="text-xs text-gray-600">2人（5歳・3歳）</p>
+                <p className="text-xs text-gray-600">
+                  {profile?.children_info || "未設定"} {/* ★ハードコード→DB値 */}
+                </p>
               </div>
             </div>
 
+            {/* 住んでいる町 */}
             <div className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50">
               <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center">
                 <MapPin className="w-4 h-4 text-white" />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-gray-800 text-sm">住んでいる町</p>
-                <p className="text-xs text-gray-600">東京都渋谷区</p>
+                <p className="text-xs text-gray-600">
+                  {profile?.location || "未設定"} {/* ★ハードコード→DB値 */}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* アップロード */}
         <UploadVideoCard />
 
         {/* カード群 */}
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-            <div onClick={goToLives} className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 rounded-xl flex items-center justify-center mb-4">
+          <button
+            onClick={goToLives}
+            className="text-left bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <div className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 rounded-xl flex items-center justify-center mb-4">
               <Monitor className="w-6 h-6 text-white" />
             </div>
             <h3 className="font-semibold text-gray-800 mb-1">ライブ配信</h3>
             <p className="text-sm text-gray-600">配信を探す</p>
-          </div>
+          </button>
 
           {/* 🎬 お気に入り動画カード → /my-videos */}
-          <div
+          <button
             onClick={goToMyVideos}
-            className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+            className="text-left bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
           >
             <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl flex items-center justify-center mb-4">
               <Play className="w-6 h-6 text-white" />
             </div>
             <h3 className="font-semibold text-gray-800 mb-1">動画</h3>
             <p className="text-sm text-gray-600">My Videos</p>
-          </div>
+          </button>
         </div>
       </main>
 
       {/* フッターナビ */}
-      <BottomNav/>
+      <BottomNav />
     </div>
   );
 };
 
 export default AppHomeScreen;
-
