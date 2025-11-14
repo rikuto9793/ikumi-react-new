@@ -21,11 +21,11 @@ const ProfileEdit: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
-  // フォームデータ
+  // フォーム
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
-  const [location, setLocation] = useState(""); // ★DBにlocation列を追加済み
+  const [location, setLocation] = useState("");
   const [childrenInfo, setChildrenInfo] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -37,15 +37,10 @@ const ProfileEdit: React.FC = () => {
     fetchProfile();
   }, []);
 
-  // ★追加: DBのdate/timestamptzなどを <input type="date" /> 用 "YYYY-MM-DD" に正規化
   const normalizeDateForInput = (value: any) => {
     if (!value) return "";
     try {
-      // 既に "YYYY-MM-DD" の場合
-      if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return value;
-      }
-      // ISOやDateでもOKにする
+      if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return "";
       return d.toISOString().slice(0, 10);
@@ -57,27 +52,21 @@ const ProfileEdit: React.FC = () => {
   const fetchProfile = async () => {
     try {
       const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push("/login");
         return;
       }
 
-      // 取得
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
 
-      // ★変更: レコードが無いときは初期作成してからローカルstateを初期化
       if (error) {
-        // PGRST116 は row not found（なければ作る）
+        // レコードが無ければ作成
         if ((error as any).code !== "PGRST116") throw error;
-
         const { error: insertErr } = await supabase
           .from("profiles")
           .insert({ id: user.id, email: user.email ?? null });
@@ -94,10 +83,10 @@ const ProfileEdit: React.FC = () => {
         setUsername(data.username || "");
         setBio(data.bio || "");
         setEmail(user.email || "");
-        setLocation(data.location || ""); // ★location列に合わせる
+        setLocation(data.location || "");
         setChildrenInfo(data.children_info || "");
-        setBirthdate(normalizeDateForInput(data.birthdate)); // ★日付を正規化
-        setAvatarUrl(data.avatar_url || ""); // ★avatar_url列に合わせる
+        setBirthdate(normalizeDateForInput(data.birthdate));
+        setAvatarUrl(data.avatar_url || "");
       }
 
       setLoading(false);
@@ -108,44 +97,54 @@ const ProfileEdit: React.FC = () => {
     }
   };
 
-  const handleAvatarUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // === 画像アップロード（Publicバケット前提） ==========================
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    setUploadingAvatar(true);
-    setError(null);
+  setUploadingAvatar(true);
+  setError(null);
 
-    try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("ログインしていません");
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("ログインしていません");
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const filePath = `${user.id}/${Date.now()}.${ext}`; // ✅ バケット名は含めない
 
-      // ★変更: ユーザーID配下に保存（将来のRLS/ポリシー対応しやすい）
-      const filePath = `avatars/${user.id}/${fileName}`;
+    const { error: uploadError } = await supabase
+      .storage
+      .from("avatars")
+      .upload(filePath, file, {
+        upsert: true,
+        cacheControl: "3600",
+        contentType: file.type || "image/jpeg",
+      });
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, { upsert: true });
+    if (uploadError) throw uploadError;
 
-      if (uploadError) throw uploadError;
+    // Public バケットならこれでOK
+    const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
+    const publicUrl = data.publicUrl;
 
-      // ★Publicバケット前提: そのままpublic URL
-      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      setAvatarUrl(data.publicUrl);
-      setUploadingAvatar(false);
-    } catch (err) {
-      console.error(err);
-      setError("画像のアップロードに失敗しました");
-      setUploadingAvatar(false);
-    }
-  };
+    setAvatarUrl(publicUrl);
+
+    // profiles.avatar_url に保存（Home で表示される）
+    const { error: updateErr } = await supabase
+      .from("profiles")
+      .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+    if (updateErr) throw updateErr;
+
+    setUploadingAvatar(false);
+  } catch (err) {
+    console.error(err);
+    setError("画像のアップロードに失敗しました");
+    setUploadingAvatar(false);
+  }
+};
+
 
   const handleSave = async () => {
     setSaving(true);
@@ -154,19 +153,16 @@ const ProfileEdit: React.FC = () => {
 
     try {
       const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("ログインしていません");
 
-      // ★変更: upsertで未作成ユーザーも一括対応
       const payload = {
         id: user.id,
         username,
         bio,
-        location, // ★addressではなくlocationを保存
+        location,
         children_info: childrenInfo,
-        birthdate: birthdate || null, // ★空文字の時はnullで保存
+        birthdate: birthdate || null,
         avatar_url: avatarUrl,
         updated_at: new Date().toISOString(),
         email: user.email ?? null,
@@ -174,16 +170,13 @@ const ProfileEdit: React.FC = () => {
 
       const { error } = await supabase
         .from("profiles")
-        .upsert(payload, { onConflict: "id" }); // ★ここがポイント
+        .upsert(payload, { onConflict: "id" });
 
       if (error) throw error;
 
       setSuccess(true);
       setSaving(false);
-
-      setTimeout(() => {
-        router.push("/home");
-      }, 1200); // ★少し短く
+      setTimeout(() => router.push("/home"), 900);
     } catch (err) {
       console.error(err);
       setError("プロフィールの更新に失敗しました");
@@ -207,6 +200,7 @@ const ProfileEdit: React.FC = () => {
           <button
             onClick={() => router.back()}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="戻る"
           >
             <ArrowLeft className="w-6 h-6 text-gray-700" />
           </button>
@@ -215,24 +209,21 @@ const ProfileEdit: React.FC = () => {
         </div>
       </header>
 
-      {/* メインコンテンツ */}
+      {/* メイン */}
       <main className="px-4 py-6 pb-24 max-w-2xl mx-auto">
         {/* アバター編集 */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center shadow-lg">
               {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-white font-bold text-3xl">👤</span>
               )}
             </div>
 
-            <label className="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+            <label className="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform" aria-label="画像を選択">
               {uploadingAvatar ? (
                 <Loader2 className="w-4 h-4 text-white animate-spin" />
               ) : (
@@ -252,7 +243,6 @@ const ProfileEdit: React.FC = () => {
 
         {/* フォーム */}
         <div className="space-y-4">
-          {/* ユーザー名 */}
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
             <label className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full flex items-center justify-center">
@@ -269,7 +259,6 @@ const ProfileEdit: React.FC = () => {
             />
           </div>
 
-          {/* メールアドレス（読み取り専用） */}
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
             <label className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center">
@@ -283,16 +272,11 @@ const ProfileEdit: React.FC = () => {
               disabled
               className="w-full px-4 py-2 border border-gray-300 rounded-xl bg-gray-50 text-gray-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              メールアドレスは変更できません
-            </p>
+            <p className="text-xs text-gray-500 mt-1">メールアドレスは変更できません</p>
           </div>
 
-          {/* 自己紹介 */}
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-            <label className="font-medium text-gray-700 mb-2 block">
-              自己紹介
-            </label>
+            <label className="font-medium text-gray-700 mb-2 block">自己紹介</label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
@@ -302,7 +286,6 @@ const ProfileEdit: React.FC = () => {
             />
           </div>
 
-          {/* 住んでいる町 */}
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
             <label className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full flex items-center justify-center">
@@ -319,7 +302,6 @@ const ProfileEdit: React.FC = () => {
             />
           </div>
 
-          {/* お子様情報 */}
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
             <label className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex items-center justify-center">
@@ -336,7 +318,6 @@ const ProfileEdit: React.FC = () => {
             />
           </div>
 
-          {/* 生年月日 */}
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
             <label className="flex items-center space-x-3 mb-2">
               <div className="w-10 h-10 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full flex items-center justify-center">
@@ -353,7 +334,6 @@ const ProfileEdit: React.FC = () => {
           </div>
         </div>
 
-        {/* エラー・成功メッセージ */}
         {error && (
           <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
             <p className="text-sm text-red-600">{error}</p>
@@ -366,7 +346,6 @@ const ProfileEdit: React.FC = () => {
           </div>
         )}
 
-        {/* 保存ボタン */}
         <button
           onClick={handleSave}
           disabled={saving}
